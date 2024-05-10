@@ -16,8 +16,8 @@ def get_move():
 class Othello:
     def __init__(self):
         self.board = [['.'] * 8 for i in range(8)]
-        self.board[3][4] = self.board[4][3] = 'B'  # 1 for black
-        self.board[3][3] = self.board[4][4] = 'W'  # 2 for white
+        self.board[3][4] = self.board[4][3] = 'B'
+        self.board[3][3] = self.board[4][4] = 'W'
         self.current_player = 'B'
 
     def display_board(self):
