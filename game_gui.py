@@ -24,8 +24,19 @@ def get_move_from_gui(event):
 
 
 def create_gui_layout():
-    layout = [[sg.Button('', size=(3, 1), key=(i, j), button_color='light blue') for j in range(8)] for i in range(8)]
-    layout.append([sg.Button('Quit')])
+    row_buttons_layout = [
+        [sg.Text(f'{i}', size=(2, 1), justification='right', font=('Arial', 8))] +
+        [sg.Button('', size=(3, 1), key=(i, j), button_color='light blue') for j in range(8)]
+        for i in range(8)
+    ]
+
+    column_numbers_layout = [
+                                sg.Text('', size=(2, 1))] + [
+                                sg.Text(f'{j}', size=(4, 1), justification='center', font=('Arial', 9)) for j in
+                                range(8)
+                            ]
+
+    layout = [column_numbers_layout] + row_buttons_layout + [[sg.Button('Quit')]]
     return layout
 
 
