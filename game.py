@@ -7,7 +7,6 @@ class OthelloGame:
         self.board[3][4] = self.board[4][3] = 1  # 1 for black
         self.board[3][3] = self.board[4][4] = 2  # 2 for white
         self.current_player = 1
-        self.game_over = False
 
     def display_board(self):
         print("  0 1 2 3 4 5 6 7")
@@ -54,18 +53,9 @@ class OthelloGame:
         return False
 
     def make_move(self, row, col):
-        # if not self.is_valid_move(row, col):  # skip turn if no valid move
-        #     return False
-
         self.board[row][col] = self.current_player
         self.flip_disks(row, col)
         self.current_player = 1 if self.current_player == 2 else 2
-        # if not self.get_all_valid_moves():
-        #     self.current_player = 1 if self.current_player == 2 else 2
-        #     if not self.get_all_valid_moves():
-        #         self.game_over = True
-
-        # return True
 
     def flip_disks(self, row, col):
         opponent = 2 if self.current_player == 1 else 1
@@ -98,7 +88,13 @@ class OthelloGame:
         return valid_moves
 
     def is_game_over(self):
-        return self.game_over
+        if len(self.get_all_valid_moves()) == 0:
+            self.current_player = 1 if self.current_player == 2 else 2
+            moves = self.get_all_valid_moves()
+            self.current_player = 1 if self.current_player == 2 else 2
+            if len(moves) == 0:
+                return True
+        return False
 
     def display_winner(self):
         black_count = 0
@@ -119,23 +115,22 @@ class OthelloGame:
         else:
             print("It's a Tie!")
 
-    def get_score(self, player):
-        player_count = sum(row.count(player) for row in self.board)
-        opponent_count = sum(row.count(1 if player == 2 else 2) for row in self.board)
-        return player_count - opponent_count
+    def get_score(self):
+        black_count = sum(row.count(1) for row in self.board)
+        white_count = sum(row.count(2) for row in self.board)
+        return black_count - white_count
 
 
 class MinimaxAlphaBeta:
     def __init__(self, depth):
         self.max_depth = depth
 
-    def evaluate(self, game, player):
-        return game.get_score(player)
+    def evaluate(self, game):
+        return game.get_score()
 
     def minimax(self, game, depth, alpha, beta, maximizing_player):
-        if depth == 0 or game.is_game_over():
-            player = 1 if maximizing_player else 2
-            return self.evaluate(game, player), None
+        if depth == 0 or game.is_game_over() or len(game.get_all_valid_moves()) == 0:
+            return self.evaluate(game), None
 
         if maximizing_player:
             max_eval = float('-inf')
@@ -191,16 +186,25 @@ algorithm = MinimaxAlphaBeta(depth=level)
 while not game.is_game_over():
     if game.current_player == 2:
         valid_moves = game.get_all_valid_moves()
-        print("Valid Moves:", valid_moves)
-        move = game.get_move()
-        while [move[0], move[1]] not in valid_moves:
-            print("\nInvalid Move")
+        if len(valid_moves) > 0:
             print("Valid Moves:", valid_moves)
             move = game.get_move()
+            while [move[0], move[1]] not in valid_moves:
+                print("\nInvalid Move")
+                print("Valid Moves:", valid_moves)
+                move = game.get_move()
+            game.make_move(move[0], move[1])
+        else:
+            game.current_player = 1
+            print("You can't make any move, so your turn is skipped.")
     else:
         move = algorithm.find_best_move(game)
+        if move is not None:
+            game.make_move(move[0], move[1])
+        else:
+            game.current_player = 2
+            print("Computer can't make any move, so it's your turn now.")
 
-    game.make_move(*move)
     game.display_board()
 
 game.display_winner()
