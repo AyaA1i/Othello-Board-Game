@@ -4,7 +4,6 @@ import PySimpleGUI as sg
 INF = 1000000000
 
 
-# Function to initialize the GUI board
 def initialize_gui_board():
     return [['.' for _ in range(8)] for _ in range(8)]
 
@@ -242,5 +241,4 @@ def main():
     window.close()
 
 
-if __name__ == "__main__":
-    main()
+main()
