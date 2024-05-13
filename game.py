@@ -1,38 +1,93 @@
 import copy
+import PySimpleGUI as sg
 
 INF = 1000000000
+white_disks = 30
+black_disks = 30
 
 
-def get_move():
-    row = input("Enter row: ")
-    col = input("Enter col: ")
-    while not row.isnumeric() or not col.isnumeric():
-        print("\nPlease enter a valid row and col numbers.")
-        row = input("Enter row: ")
-        col = input("Enter col: ")
-    return int(row), int(col)
+def update_board(window, board):
+    for i in range(8):
+        for j in range(8):
+            color = "light blue" if board[i][j] == "." else ("white" if board[i][j] == "W" else "black")
+            window[(i, j)].update(board[i][j], button_color=("black", color))
+
+
+def get_move_from_user(event):
+    row, col = event
+    return row, col
+
+
+def create_layout():
+    layout = [[sg.Button("", size=(3, 1), key=(i, j), button_color="light blue") for j in range(8)] for i in range(8)]
+    layout.append([sg.Button("Quit")])
+    return layout
+
+
+def minimax_alpha_beta(game, depth, white_disk_count, black_disk_count, alpha, beta, maximizing_player):
+    if (depth == 0 or game.is_over() or len(game.get_all_valid_moves()) == 0
+            or (maximizing_player and white_disk_count == 0)
+            or (not maximizing_player and black_disk_count == 0)):
+        return [game.get_score(), None]
+
+    if maximizing_player:
+        max_score = -INF
+        best_move = None
+
+        children = game.get_all_valid_moves()
+        for child in children:
+            new_game = copy.deepcopy(game)
+            new_game.play(child[0], child[1])
+            player_ans = minimax_alpha_beta(new_game, depth - 1,
+                                            white_disk_count - 1, black_disk_count, alpha, beta, False)
+
+            # ans[0] -> score, ans[1] -> move
+            if player_ans[0] > max_score:
+                max_score = player_ans[0]
+                best_move = child
+
+            alpha = max(alpha, player_ans[0])
+            if beta <= alpha:
+                break
+
+        return max_score, best_move
+    else:
+        min_score = INF
+        best_move = None
+
+        children = game.get_all_valid_moves()
+        for child in children:
+            new_game = copy.deepcopy(game)
+            new_game.play(child[0], child[1])
+            player_ans = minimax_alpha_beta(new_game, depth - 1,
+                                            white_disk_count, black_disk_count - 1, alpha, beta, True)
+
+            # ans[0] -> score, ans[1] -> move
+            if player_ans[0] < min_score:
+                min_score = player_ans[0]
+                best_move = child
+
+            alpha = min(alpha, player_ans[0])
+            if beta <= alpha:
+                break
+
+        return min_score, best_move
 
 
 class Othello:
     def __init__(self):
-        self.board = [['.'] * 8 for i in range(8)]
-        self.board[3][4] = self.board[4][3] = 'B'
-        self.board[3][3] = self.board[4][4] = 'W'
-        self.current_player = 'B'
-
-    def display_board(self):
-        print("  0 1 2 3 4 5 6 7")
-        for i in range(8):
-            print(i, end=" ")
-            for j in range(8):
-                print(self.board[i][j], end=" ")
-            print()
+        self.board = [["." for _ in range(8)] for _ in range(8)]
+        self.board[3][4] = self.board[4][3] = "B"
+        self.board[3][3] = self.board[4][4] = "W"
+        self.current_player = "B"
 
     def is_valid_move(self, row, col):
-        if self.board[row][col] != '.':
+        global black_disks, white_disks
+        if (self.board[row][col] != "." or
+                (self.current_player == "W" and white_disks == 0) or (self.current_player == "B" and black_disks == 0)):
             return False
 
-        opponent = 'W' if self.current_player == 'B' else 'B'
+        opponent = "W" if self.current_player == "B" else "B"
         dx = [1, 0, -1, 0]
         dy = [0, 1, 0, -1]
 
@@ -52,11 +107,11 @@ class Othello:
 
     def play(self, row, col):
         self.board[row][col] = self.current_player
-        self.flip_disks(row, col)
-        self.current_player = 'B' if self.current_player == 'W' else 'W'
+        self.outflank(row, col)
+        self.current_player = "B" if self.current_player == "W" else "W"
 
-    def flip_disks(self, row, col):
-        opponent = 'W' if self.current_player == 'B' else 'B'
+    def outflank(self, row, col):
+        opponent = "W" if self.current_player == "B" else "B"
         dx = [1, 0, -1, 0]
         dy = [0, 1, 0, -1]
 
@@ -86,12 +141,15 @@ class Othello:
         return moves
 
     def is_over(self):
+        if white_disks == 0 and black_disks == 0:
+            return True
+
         if len(self.get_all_valid_moves()) == 0:
-            self.current_player = 'B' if self.current_player == 'W' else 'W'
+            self.current_player = "B" if self.current_player == "W" else "W"
             moves = self.get_all_valid_moves()
-            self.current_player = 'B' if self.current_player == 'W' else 'W'
             if len(moves) == 0:
                 return True
+            self.current_player = "B" if self.current_player == "W" else "W"
         return False
 
     def display_winner(self):
@@ -100,110 +158,110 @@ class Othello:
 
         for i in range(8):
             for j in range(8):
-                if self.board[i][j] == 'B':
+                if self.board[i][j] == "B":
                     black_count += 1
-                if self.board[i][j] == 'W':
+                if self.board[i][j] == "W":
                     white_count += 1
 
-        print(f"You: {white_count}, Computer: {black_count}")
-        if black_count < white_count:
-            print("Congrats, You Won!")
-        elif black_count > white_count:
-            print("You Lost!")
+        sg.popup(f"You: {black_count}, Computer: {white_count}")
+        if black_count > white_count:
+            sg.popup("Congrats, You Won!")
+        elif black_count < white_count:
+            sg.popup("You Lost!")
         else:
-            print("It's a Tie!")
+            sg.popup("It's a Tie!")
 
     def get_score(self):
-        black_count = sum(row.count('B') for row in self.board)
-        white_count = sum(row.count('W') for row in self.board)
-        return black_count - white_count
+        black_count = sum(row.count("B") for row in self.board)
+        white_count = sum(row.count("W") for row in self.board)
+        return white_count - black_count
 
 
-def minimax_alpha_beta(state, depth, alpha, beta, maximizing_player):
-    if depth == 0 or state.is_over() or len(state.get_all_valid_moves()) == 0:
-        return [state.get_score(), None]
+def initialize_game_gui():
+    level = 0
 
-    if maximizing_player:
-        max_score = -INF
-        best_move = None
+    levels = ["Easy", "Medium", "Hard"]
+    lst = sg.Combo(levels, font=("Arial Bold", 14), key="-COMBO-")
+    layout = [[sg.Text("Pick a Level", font=("Arial Bold", 14)), lst, sg.Button("Ok"), sg.Button("Exit")]]
+    level_window = sg.Window("Level", layout, size=(330, 100))
+    while True:
+        event, values = level_window.read()
+        print(event, values)
+        if event in (sg.WIN_CLOSED, "Exit"):
+            break
+        if event == "Ok":
+            value = values["-COMBO-"]
+            if value == "Easy":
+                level = 1
+            elif value == "Medium":
+                level = 3
+            else:
+                level = 5
+            break
+    level_window.close()
 
-        children = state.get_all_valid_moves()
-        for child in children:
-            new_state = copy.deepcopy(state)
-            new_state.play(child[0], child[1])
-            player_ans = minimax_alpha_beta(new_state, depth - 1, alpha, beta, False)
+    return level
 
-            # ans[0] -> score, ans[1] -> move
-            if player_ans[0] > max_score:
-                max_score = player_ans[0]
-                best_move = child
 
-            alpha = max(alpha, player_ans[0])
-            if beta <= alpha:
+class GameController:
+    global white_disks, black_disks
+    def run(self):
+        global black_disks, white_disks
+        level = initialize_game_gui()
+        if level == 0:
+            return
+
+        game = Othello()
+        layout = create_layout()
+        window = sg.Window("Othello", layout, finalize=True)
+        update_board(window, game.board)
+
+        while True:
+            if game.is_over():
+                game.display_winner()
                 break
 
-        return max_score, best_move
-    else:
-        min_score = INF
-        best_move = None
+            if game.current_player == "B":
+                if black_disks == 0:
+                    game.current_player = "W"
+                    sg.popup("You ran out of disks, so you can't make any move.")
+                else:
+                    valid_moves = game.get_all_valid_moves()
+                    if len(valid_moves) > 0:
+                        event, values = window.read()
+                        if event == sg.WINDOW_CLOSED or event == "Quit":
+                            break
+                        move = get_move_from_user(event)
+                        while [move[0], move[1]] not in valid_moves:
+                            sg.popup("\nInvalid Move")
+                            sg.popup("Valid Moves (0-based):", valid_moves)
+                            event, values = window.read()
+                            if event == sg.WINDOW_CLOSED or event == "Quit":
+                                break
+                            move = get_move_from_user(event)
+                        game.play(move[0], move[1])
+                        update_board(window, game.board)
+                        black_disks -= 1
+                    else:
+                        game.current_player = "W"
+                        sg.popup("You can't make any move, so your turn is skipped.")
+            else:
+                if white_disks == 0:
+                    game.current_player = "B"
+                    sg.popup("Computer ran out of disks, so it's your turn now.")
+                else:
+                    ans = minimax_alpha_beta(game, level, white_disks, black_disks, -INF, INF, True)
+                    if ans[1] is not None:
+                        game.play(ans[1][0], ans[1][1])
+                        update_board(window, game.board)
+                        white_disks -= 1
+                    else:
+                        game.current_player = "B"
+                        sg.popup("Computer can't make any move, so it's your turn now.")
 
-        children = state.get_all_valid_moves()
-        for child in children:
-            new_state = copy.deepcopy(state)
-            new_state.play(child[0], child[1])
-            player_ans = minimax_alpha_beta(new_state, depth - 1, alpha, beta, True)
-
-            # ans[0] -> score, ans[1] -> move
-            if player_ans[0] < min_score:
-                min_score = player_ans[0]
-                best_move = child
-
-            alpha = min(alpha, player_ans[0])
-            if beta <= alpha:
-                break
-
-        return min_score, best_move
+        window.close()
 
 
-# ---------------------------------------------------------------------------------------------------------------------
-
-print("Welcome to Othello Game!")
-print("How challenging you want the game to be?")
-print("Pick a number:")
-print("1- Easy")
-print("3- Medium")
-print("5- Hard")
-
-game = Othello()
-level = int(input(">> "))
-
-print("Let's Begin! (Computer is Black, You are white)")
-game.display_board()
-
-while not game.is_over():
-    if game.current_player == 'W':
-        valid_moves = game.get_all_valid_moves()
-        if len(valid_moves) > 0:
-            print("Valid Moves:", valid_moves)
-            move = get_move()
-
-            while [move[0], move[1]] not in valid_moves:
-                print("\nInvalid Move")
-                print("Valid Moves:", valid_moves)
-                move = get_move()
-
-            game.play(move[0], move[1])
-        else:
-            game.current_player = 'B'
-            print("You can't make any move, so your turn is skipped.")
-    else:
-        ans = minimax_alpha_beta(game, level, -INF, INF, True)
-        if ans[1] is not None:
-            game.play(ans[1][0], ans[1][1])
-        else:
-            game.current_player = 'W'
-            print("Computer can't make any move, so it's your turn now.")
-
-    game.display_board()
-
-game.display_winner()
+if __name__ == "__main__":
+    controller = GameController()
+    controller.run()
