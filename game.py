@@ -228,6 +228,7 @@ class GameController:
                 else:
                     valid_moves = game.get_all_valid_moves()
                     if len(valid_moves) > 0:
+                        sg.popup("Valid Moves (0-based):", valid_moves)
                         event, values = window.read()
                         if event == sg.WINDOW_CLOSED or event == "Quit":
                             break
