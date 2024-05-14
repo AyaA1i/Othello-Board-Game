@@ -67,7 +67,7 @@ def minimax_alpha_beta(game, depth, white_disk_count, black_disk_count, alpha, b
                 min_score = player_ans[0]
                 best_move = child
 
-            alpha = min(alpha, player_ans[0])
+            beta = min(beta, player_ans[0])
             if beta <= alpha:
                 break
 
